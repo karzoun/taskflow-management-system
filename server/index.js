@@ -2,12 +2,19 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const authRoutes = require("./routes/auth");
+const projectRoutes = require("./routes/projects");
+
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+app.use("/auth", authRoutes);
+app.use("/projects", projectRoutes);
+
 
 // Basic health check route
 app.get("/", (req, res) => {
