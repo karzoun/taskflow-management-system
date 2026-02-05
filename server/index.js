@@ -4,6 +4,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
 const projectRoutes = require("./routes/projects");
+const taskRoutes = require("./routes/tasks");
 
 
 const app = express();
@@ -14,6 +15,10 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/projects", projectRoutes);
+
+app.use("/auth", authRoutes);
+app.use("/projects", projectRoutes);
+app.use("/projects/:projectId/tasks", taskRoutes);
 
 
 // Basic health check route
