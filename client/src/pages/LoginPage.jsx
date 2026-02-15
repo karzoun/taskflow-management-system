@@ -29,32 +29,42 @@ function LoginPage() {
     }
   };
 
-  return (
-    <div style={{ maxWidth: 400, margin: "2rem auto" }}>
-      <h1>TaskFlow - Login</h1>
+ return (
+  <div
+    style={{
+      minHeight: "100vh",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: "#111",
+      color: "#fff",
+    }}
+  >
+    <div style={{ width: "100%", maxWidth: 400 }}>
+      <h1 style={{ marginBottom: "1.5rem" }}>TaskFlow - Login</h1>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "1rem" }}>
-          <label>
+          <label style={{ display: "block", marginBottom: "0.25rem" }}>
             Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem" }}
-            />
           </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
         </div>
 
         <div style={{ marginBottom: "1rem" }}>
-          <label>
+          <label style={{ display: "block", marginBottom: "0.25rem" }}>
             Password
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem" }}
-            />
           </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ width: "100%", padding: "0.5rem" }}
+          />
         </div>
 
         {error && (
@@ -64,13 +74,15 @@ function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          style={{ padding: "0.5rem 1rem" }}
+          style={{ padding: "0.5rem 1rem", cursor: "pointer" }}
         >
           {loading ? "Logging in..." : "Login"}
         </button>
       </form>
     </div>
-  );
+  </div>
+);
+
 }
 
 export default LoginPage;
