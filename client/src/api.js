@@ -1,13 +1,9 @@
 const API_BASE_URL = "http://localhost:4000";
 
 async function request(path, { method = "GET", token, body } = {}) {
-  const headers = {
-    "Content-Type": "application/json",
-  };
+  const headers = { "Content-Type": "application/json" };
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -25,6 +21,7 @@ async function request(path, { method = "GET", token, body } = {}) {
   return data;
 }
 
+// AUTH
 export function loginApi(email, password) {
   return request("/auth/login", {
     method: "POST",
@@ -32,11 +29,43 @@ export function loginApi(email, password) {
   });
 }
 
+// PROJECTS
 export function getProjectsApi(token) {
-  return request("/projects", {
-    method: "GET",
+  return request("/projects", { method: "GET", token });
+}
+
+export function createProjectApi(token, project) {
+  return request("/projects", { method: "POST", token, body: project });
+}
+
+export function getProjectApi(token, projectId) {
+  return request(`/projects/${projectId}`, { method: "GET", token });
+}
+
+// TASKS (nested)
+export function getTasksApi(token, projectId) {
+  return request(`/projects/${projectId}/tasks`, { method: "GET", token });
+}
+
+export function createTaskApi(token, projectId, task) {
+  return request(`/projects/${projectId}/tasks`, {
+    method: "POST",
     token,
+    body: task,
   });
 }
 
-// later you can add: createProjectApi, getTasksApi, etc.
+export function updateTaskApi(token, projectId, taskId, updates) {
+  return request(`/projects/${projectId}/tasks/${taskId}`, {
+    method: "PUT",
+    token,
+    body: updates,
+  });
+}
+
+export function deleteTaskApi(token, projectId, taskId) {
+  return request(`/projects/${projectId}/tasks/${taskId}`, {
+    method: "DELETE",
+    token,
+  });
+}
