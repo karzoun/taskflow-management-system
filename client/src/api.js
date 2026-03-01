@@ -3,7 +3,9 @@ const API_BASE_URL = "http://localhost:4000";
 async function request(path, { method = "GET", token, body } = {}) {
   const headers = { "Content-Type": "application/json" };
 
-  if (token) headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
@@ -42,7 +44,7 @@ export function getProjectApi(token, projectId) {
   return request(`/projects/${projectId}`, { method: "GET", token });
 }
 
-// TASKS (nested)
+// TASKS
 export function getTasksApi(token, projectId) {
   return request(`/projects/${projectId}/tasks`, { method: "GET", token });
 }
@@ -68,4 +70,9 @@ export function deleteTaskApi(token, projectId, taskId) {
     method: "DELETE",
     token,
   });
+}
+
+// ANALYTICS
+export function getAnalyticsSummaryApi(token) {
+  return request("/analytics/summary", { method: "GET", token });
 }

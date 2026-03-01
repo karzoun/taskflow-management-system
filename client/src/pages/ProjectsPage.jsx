@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { getProjectsApi, createProjectApi } from "../api";
+import {
+  getProjectsApi,
+  createProjectApi,
+  getAnalyticsSummaryApi,
+} from "../api";
 
 function ProjectsPage() {
   const { token, user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [analytics, setAnalytics] = useState(null);
+
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [error, setError] = useState("");
 
   // Create project form
@@ -18,14 +25,27 @@ function ProjectsPage() {
 
   const loadProjects = async () => {
     setError("");
-    setLoading(true);
+    setLoadingProjects(true);
     try {
       const data = await getProjectsApi(token);
       setProjects(data);
     } catch (err) {
       setError(err.message || "Failed to load projects");
     } finally {
-      setLoading(false);
+      setLoadingProjects(false);
+    }
+  };
+
+  const loadAnalytics = async () => {
+    setLoadingAnalytics(true);
+    try {
+      const data = await getAnalyticsSummaryApi(token);
+      setAnalytics(data);
+    } catch (err) {
+      // Don’t block page if analytics fails
+      console.error("Analytics error:", err);
+    } finally {
+      setLoadingAnalytics(false);
     }
   };
 
@@ -35,6 +55,7 @@ function ProjectsPage() {
       return;
     }
     loadProjects();
+    loadAnalytics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, token]);
 
@@ -63,12 +84,17 @@ function ProjectsPage() {
       setTitle("");
       setDescription("");
       await loadProjects();
+      await loadAnalytics();
     } catch (err) {
       setError(err.message || "Failed to create project");
     } finally {
       setCreating(false);
     }
   };
+
+  const todo = analytics?.tasksByStatus?.todo ?? 0;
+  const inProgress = analytics?.tasksByStatus?.inProgress ?? 0;
+  const done = analytics?.tasksByStatus?.done ?? 0;
 
   return (
     <div style={{ maxWidth: 900, margin: "2rem auto", padding: "0 1rem" }}>
@@ -80,6 +106,50 @@ function ProjectsPage() {
         </div>
       </header>
 
+      {/* Analytics summary */}
+      <section
+        style={{
+          marginTop: "1rem",
+          padding: "0.75rem 1rem",
+          borderRadius: 8,
+          border: "1px solid #ddd",
+          background: "#fafafa",
+          fontSize: "0.9rem",
+        }}
+      >
+        {loadingAnalytics ? (
+          <p>Loading summary...</p>
+        ) : analytics ? (
+          <div
+            style={{
+              display: "flex",
+              gap: "1.5rem",
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <span>
+              <strong>Projects:</strong> {analytics.totalProjects}
+            </span>
+            <span>
+              <strong>Tasks:</strong> {analytics.totalTasks}
+            </span>
+            <span>
+              <strong>To Do:</strong> {todo}
+            </span>
+            <span>
+              <strong>In Progress:</strong> {inProgress}
+            </span>
+            <span>
+              <strong>Done:</strong> {done}
+            </span>
+          </div>
+        ) : (
+          <p>No analytics available yet.</p>
+        )}
+      </section>
+
+      {/* Create project */}
       <section
         style={{
           marginTop: "1.5rem",
@@ -112,17 +182,23 @@ function ProjectsPage() {
             />
           </div>
 
+          {error && (
+            <p style={{ color: "red", marginBottom: "0.5rem" }}>{error}</p>
+          )}
+
           <button type="submit" disabled={creating}>
             {creating ? "Creating..." : "Create"}
           </button>
         </form>
       </section>
 
+      {/* Projects list */}
       <section style={{ marginTop: "1.5rem" }}>
-        {loading && <p>Loading projects...</p>}
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {loadingProjects && <p>Loading projects...</p>}
 
-        {!loading && projects.length === 0 && <p>No projects yet.</p>}
+        {!loadingProjects && projects.length === 0 && !error && (
+          <p>No projects yet. Create your first project above.</p>
+        )}
 
         <ul style={{ paddingLeft: "1.25rem" }}>
           {projects.map((p) => (

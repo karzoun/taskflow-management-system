@@ -5,6 +5,7 @@ const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
 const projectRoutes = require("./routes/projects");
 const taskRoutes = require("./routes/tasks");
+const analyticsRoutes = require("./routes/analytics");
 
 
 const app = express();
@@ -19,6 +20,7 @@ app.use("/projects", projectRoutes);
 app.use("/auth", authRoutes);
 app.use("/projects", projectRoutes);
 app.use("/projects/:projectId/tasks", taskRoutes);
+app.use("/analytics", analyticsRoutes);
 
 
 // Basic health check route
