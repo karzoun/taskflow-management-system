@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 async function request(path, { method = "GET", token, body } = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -16,7 +16,8 @@ async function request(path, { method = "GET", token, body } = {}) {
   const data = await res.json().catch(() => null);
 
   if (!res.ok) {
-    const message = data?.message || "Request failed";
+    // Support both { error } (new standard) and { message } (legacy)
+    const message = data?.error || data?.message || "Request failed";
     throw new Error(message);
   }
 
@@ -42,6 +43,10 @@ export function createProjectApi(token, project) {
 
 export function getProjectApi(token, projectId) {
   return request(`/projects/${projectId}`, { method: "GET", token });
+}
+
+export function deleteProjectApi(token, projectId) {
+  return request(`/projects/${projectId}`, { method: "DELETE", token });
 }
 
 // TASKS

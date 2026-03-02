@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import {
   getProjectsApi,
   createProjectApi,
+  deleteProjectApi,
   getAnalyticsSummaryApi,
 } from "../api";
+
+const TITLE_MAX = 100;
 
 function ProjectsPage() {
   const { token, user, logout, isAuthenticated } = useAuth();
@@ -16,21 +19,23 @@ function ProjectsPage() {
 
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
-  const [error, setError] = useState("");
+  const [pageError, setPageError] = useState("");
 
   // Create project form
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [titleError, setTitleError] = useState("");
+  const [formError, setFormError] = useState("");
   const [creating, setCreating] = useState(false);
 
   const loadProjects = async () => {
-    setError("");
+    setPageError("");
     setLoadingProjects(true);
     try {
       const data = await getProjectsApi(token);
       setProjects(data);
     } catch (err) {
-      setError(err.message || "Failed to load projects");
+      setPageError(err.message || "Failed to load projects");
     } finally {
       setLoadingProjects(false);
     }
@@ -42,7 +47,6 @@ function ProjectsPage() {
       const data = await getAnalyticsSummaryApi(token);
       setAnalytics(data);
     } catch (err) {
-      // Don’t block page if analytics fails
       console.error("Analytics error:", err);
     } finally {
       setLoadingAnalytics(false);
@@ -64,12 +68,27 @@ function ProjectsPage() {
     navigate("/");
   };
 
+  const handleDeleteProject = async (projectId, projectTitle) => {
+    if (!window.confirm(`Delete "${projectTitle}"? This will also delete all its tasks and cannot be undone.`)) {
+      return;
+    }
+    setPageError("");
+    try {
+      await deleteProjectApi(token, projectId);
+      setProjects((prev) => prev.filter((p) => p._id !== projectId));
+      loadAnalytics();
+    } catch (err) {
+      setPageError(err.message || "Failed to delete project");
+    }
+  };
+
   const handleCreateProject = async (e) => {
     e.preventDefault();
-    setError("");
+    setFormError("");
+    setTitleError("");
 
     if (!title.trim()) {
-      setError("Project title is required");
+      setTitleError("Title is required");
       return;
     }
 
@@ -84,9 +103,9 @@ function ProjectsPage() {
       setTitle("");
       setDescription("");
       await loadProjects();
-      await loadAnalytics();
+      loadAnalytics();
     } catch (err) {
-      setError(err.message || "Failed to create project");
+      setFormError(err.message || "Failed to create project");
     } finally {
       setCreating(false);
     }
@@ -97,121 +116,210 @@ function ProjectsPage() {
   const done = analytics?.tasksByStatus?.done ?? 0;
 
   return (
-    <div style={{ maxWidth: 900, margin: "2rem auto", padding: "0 1rem" }}>
-      <header style={{ display: "flex", justifyContent: "space-between" }}>
+    <div style={{ maxWidth: 860, margin: "0 auto", padding: "2rem 1rem" }}>
+      {/* Header */}
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "1.5rem",
+          gap: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
         <h1>My Projects</h1>
-        <div>
-          {user && <span style={{ marginRight: "1rem" }}>Hi, {user.name}</span>}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          {user && (
+            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
+              {user.name}
+            </span>
+          )}
           <button onClick={handleLogout}>Logout</button>
         </div>
       </header>
 
       {/* Analytics summary */}
-      <section
-        style={{
-          marginTop: "1rem",
-          padding: "0.75rem 1rem",
-          borderRadius: 8,
-          border: "1px solid #ddd",
-          background: "#fafafa",
-          fontSize: "0.9rem",
-        }}
-      >
+      <div className="card" style={{ marginBottom: "1.5rem" }}>
         {loadingAnalytics ? (
-          <p>Loading summary...</p>
+          <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            Loading summary…
+          </p>
         ) : analytics ? (
-          <div
-            style={{
-              display: "flex",
-              gap: "1.5rem",
-              flexWrap: "wrap",
-              alignItems: "center",
-            }}
-          >
-            <span>
-              <strong>Projects:</strong> {analytics.totalProjects}
-            </span>
-            <span>
-              <strong>Tasks:</strong> {analytics.totalTasks}
-            </span>
-            <span>
-              <strong>To Do:</strong> {todo}
-            </span>
-            <span>
-              <strong>In Progress:</strong> {inProgress}
-            </span>
-            <span>
-              <strong>Done:</strong> {done}
-            </span>
+          <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", alignItems: "center" }}>
+            <StatItem label="Projects" value={analytics.totalProjects} />
+            <StatItem label="Tasks" value={analytics.totalTasks} />
+            <StatItem label="To Do" value={todo} color="#94a3b8" />
+            <StatItem label="In Progress" value={inProgress} color="#f59e0b" />
+            <StatItem label="Done" value={done} color="#22c55e" />
           </div>
         ) : (
-          <p>No analytics available yet.</p>
+          <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            No analytics available yet.
+          </p>
         )}
-      </section>
+      </div>
 
       {/* Create project */}
-      <section
-        style={{
-          marginTop: "1.5rem",
-          padding: "1rem",
-          border: "1px solid #ddd",
-          borderRadius: 8,
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Create Project</h2>
-        <form onSubmit={handleCreateProject}>
+      <div className="card" style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ marginBottom: "1rem" }}>New Project</h2>
+        <form onSubmit={handleCreateProject} noValidate>
           <div style={{ marginBottom: "0.75rem" }}>
-            <label style={{ display: "block", marginBottom: 6 }}>Title</label>
+            <label style={labelStyle}>
+              Title <Required />
+            </label>
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem" }}
+              onChange={(e) => {
+                if (e.target.value.length <= TITLE_MAX) setTitle(e.target.value);
+                if (titleError) setTitleError("");
+              }}
               placeholder="e.g., Capstone Sprint Board"
+              maxLength={TITLE_MAX}
+              style={titleError ? { borderColor: "var(--danger)" } : undefined}
             />
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.25rem" }}>
+              {titleError ? (
+                <span style={{ color: "var(--danger)", fontSize: "0.8rem" }}>{titleError}</span>
+              ) : (
+                <span />
+              )}
+              <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                {title.length}/{TITLE_MAX}
+              </span>
+            </div>
           </div>
 
-          <div style={{ marginBottom: "0.75rem" }}>
-            <label style={{ display: "block", marginBottom: 6 }}>
-              Description
-            </label>
+          <div style={{ marginBottom: "1rem" }}>
+            <label style={labelStyle}>Description</label>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{ width: "100%", padding: "0.5rem" }}
               placeholder="Short description (optional)"
+              maxLength={300}
             />
           </div>
 
-          {error && (
-            <p style={{ color: "red", marginBottom: "0.5rem" }}>{error}</p>
-          )}
+          {formError && <AlertError style={{ marginBottom: "0.75rem" }}>{formError}</AlertError>}
 
-          <button type="submit" disabled={creating}>
-            {creating ? "Creating..." : "Create"}
+          <button type="submit" disabled={creating} className="btn-primary">
+            {creating ? "Creating…" : "Create Project"}
           </button>
         </form>
-      </section>
+      </div>
+
+      {/* Page-level errors (load / delete) */}
+      {pageError && <AlertError style={{ marginBottom: "1rem" }}>{pageError}</AlertError>}
 
       {/* Projects list */}
-      <section style={{ marginTop: "1.5rem" }}>
-        {loadingProjects && <p>Loading projects...</p>}
+      <section>
+        <h2 style={{ marginBottom: "0.875rem" }}>Projects</h2>
 
-        {!loadingProjects && projects.length === 0 && !error && (
-          <p>No projects yet. Create your first project above.</p>
+        {loadingProjects && (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>Loading projects…</p>
         )}
 
-        <ul style={{ paddingLeft: "1.25rem" }}>
+        {!loadingProjects && projects.length === 0 && !pageError && (
+          <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            No projects yet. Create your first project above.
+          </p>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
           {projects.map((p) => (
-            <li key={p._id} style={{ marginBottom: "0.5rem" }}>
-              <Link to={`/projects/${p._id}`}>
-                <strong>{p.title}</strong>
+            <div
+              key={p._id}
+              className="card"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: "1rem",
+                transition: "border-color 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+            >
+              <Link
+                to={`/projects/${p._id}`}
+                style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: p.description ? "0.2rem" : 0 }}>
+                  {p.title}
+                </div>
+                {p.description && (
+                  <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                    {p.description}
+                  </div>
+                )}
               </Link>
-              {p.description && <span> — {p.description}</span>}
-            </li>
+              <button
+                className="btn-danger"
+                onClick={() => handleDeleteProject(p._id, p.title)}
+                title="Delete project"
+                style={{ flexShrink: 0 }}
+              >
+                Delete
+              </button>
+            </div>
           ))}
-        </ul>
+        </div>
       </section>
     </div>
+  );
+}
+
+function StatItem({ label, value, color }) {
+  return (
+    <div style={{ textAlign: "center", minWidth: 60 }}>
+      <div
+        style={{
+          fontSize: "1.5rem",
+          fontWeight: 700,
+          color: color || "var(--text)",
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+      <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.2rem" }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "0.375rem",
+  fontSize: "0.875rem",
+  fontWeight: 500,
+};
+
+function Required() {
+  return (
+    <span style={{ color: "var(--danger)", marginLeft: "0.15rem" }} aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+function AlertError({ children, style }) {
+  return (
+    <p
+      style={{
+        color: "var(--danger)",
+        fontSize: "0.875rem",
+        margin: 0,
+        padding: "0.5rem 0.75rem",
+        background: "rgba(239,68,68,0.1)",
+        borderRadius: "6px",
+        border: "1px solid rgba(239,68,68,0.25)",
+        ...style,
+      }}
+    >
+      {children}
+    </p>
   );
 }
 

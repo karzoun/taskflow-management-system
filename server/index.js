@@ -15,16 +15,13 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/auth", authRoutes);
-app.use("/projects", projectRoutes);
-
-app.use("/auth", authRoutes);
-app.use("/projects", projectRoutes);
 app.use("/projects/:projectId/tasks", taskRoutes);
+app.use("/projects", projectRoutes);
 app.use("/analytics", analyticsRoutes);
 
 
 // Basic health check route
-app.get("/", (req, res) => {
+app.get("/", (_req, res) => {
   res.send("TaskFlow API is running");
 });
 

@@ -58,7 +58,7 @@ router.get("/summary", async (req, res) => {
     });
   } catch (err) {
     console.error("GET /analytics/summary error:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ error: "Server error" });
   }
 });
 

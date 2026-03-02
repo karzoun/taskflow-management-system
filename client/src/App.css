@@ -1,42 +1,67 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
 .card {
-  padding: 2em;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
 }
 
-.read-the-docs {
-  color: #888;
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Status badges */
+.badge-todo {
+  background: #1e2535;
+  color: #94a3b8;
+}
+
+.badge-inprogress {
+  background: #2d1f00;
+  color: #f59e0b;
+}
+
+.badge-done {
+  background: #052e14;
+  color: #22c55e;
+}
+
+/* Priority badges */
+.badge-low {
+  background: #1e2535;
+  color: #64748b;
+}
+
+.badge-medium {
+  background: #1a2744;
+  color: #60a5fa;
+}
+
+.badge-high {
+  background: #2d1010;
+  color: #f87171;
+}
+
+/* Status button active variants */
+.btn-status-todo.active {
+  background: #1e2535;
+  border-color: #94a3b8;
+  color: #94a3b8;
+}
+
+.btn-status-inprogress.active {
+  background: #2d1f00;
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.btn-status-done.active {
+  background: #052e14;
+  border-color: #22c55e;
+  color: #22c55e;
 }
