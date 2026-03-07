@@ -3,20 +3,20 @@
   line-height: 1.5;
   font-weight: 400;
 
-  --bg: #0f0f11;
-  --surface: #1a1a1e;
-  --surface-2: #222228;
-  --border: #2e2e38;
-  --text: #f0f0f5;
-  --text-muted: rgba(240, 240, 245, 0.5);
+  --bg: #f5f5f8;
+  --surface: #ffffff;
+  --surface-2: #f0f0f5;
+  --border: #dcdce8;
+  --text: #111118;
+  --text-muted: #6b6b80;
   --accent: #6366f1;
   --accent-hover: #4f46e5;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --danger-hover: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
 
-  color-scheme: dark;
+  color-scheme: light;
   color: var(--text);
   background-color: var(--bg);
 
@@ -88,7 +88,7 @@ textarea::placeholder {
 }
 
 select option {
-  background: var(--surface-2);
+  background: var(--surface);
 }
 
 button {
@@ -109,8 +109,8 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: var(--border);
-  border-color: #3e3e4a;
+  background: #e8e8f0;
+  border-color: #c8c8d8;
 }
 
 button:disabled {

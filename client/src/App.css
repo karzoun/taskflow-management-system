@@ -17,51 +17,51 @@
 
 /* Status badges */
 .badge-todo {
-  background: #1e2535;
-  color: #94a3b8;
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .badge-inprogress {
-  background: #2d1f00;
-  color: #f59e0b;
+  background: #fffbeb;
+  color: #92400e;
 }
 
 .badge-done {
-  background: #052e14;
-  color: #22c55e;
+  background: #f0fdf4;
+  color: #166534;
 }
 
 /* Priority badges */
 .badge-low {
-  background: #1e2535;
+  background: #f8fafc;
   color: #64748b;
 }
 
 .badge-medium {
-  background: #1a2744;
-  color: #60a5fa;
+  background: #eff6ff;
+  color: #1e40af;
 }
 
 .badge-high {
-  background: #2d1010;
-  color: #f87171;
+  background: #fff1f2;
+  color: #9f1239;
 }
 
 /* Status button active variants */
 .btn-status-todo.active {
-  background: #1e2535;
+  background: #f1f5f9;
   border-color: #94a3b8;
-  color: #94a3b8;
+  color: #475569;
 }
 
 .btn-status-inprogress.active {
-  background: #2d1f00;
-  border-color: #f59e0b;
-  color: #f59e0b;
+  background: #fffbeb;
+  border-color: #d97706;
+  color: #92400e;
 }
 
 .btn-status-done.active {
-  background: #052e14;
+  background: #f0fdf4;
   border-color: #22c55e;
-  color: #22c55e;
+  color: #166534;
 }
