@@ -3,31 +3,29 @@ const Task = require("../models/Task");
 const Project = require("../models/Project");
 const auth = require("../middleware/auth");
 
-// mergeParams: true lets us access :projectId passed from index.js
 const router = express.Router({ mergeParams: true });
 
 const VALID_STATUSES = ["todo", "in-progress", "done"];
 const VALID_PRIORITIES = ["low", "medium", "high"];
 
-// All task routes require authentication
 router.use(auth);
 
-// Helper: ensure project belongs to current user
-async function ensureProjectOwnership(projectId, userId) {
-  const project = await Project.findOne({ _id: projectId, ownerId: userId });
+// Helper: ensure project exists (shared workspace — no ownership check)
+async function ensureProjectExists(projectId) {
+  const project = await Project.findById(projectId);
   if (!project) {
-    const error = new Error("Project not found or not authorized");
+    const error = new Error("Project not found");
     error.statusCode = 404;
     throw error;
   }
   return project;
 }
 
-// GET /projects/:projectId/tasks - list tasks for this project
+// GET /projects/:projectId/tasks
 router.get("/", async (req, res) => {
   try {
     const { projectId } = req.params;
-    await ensureProjectOwnership(projectId, req.user.userId);
+    await ensureProjectExists(projectId);
 
     const tasks = await Task.find({ projectId }).sort({ createdAt: -1 });
     res.json(tasks);
@@ -37,11 +35,11 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /projects/:projectId/tasks - create a new task in this project
+// POST /projects/:projectId/tasks
 router.post("/", async (req, res) => {
   try {
     const { projectId } = req.params;
-    await ensureProjectOwnership(projectId, req.user.userId);
+    await ensureProjectExists(projectId);
 
     const { title, description, status, priority, dueDate, assigneeId } = req.body;
 
@@ -82,15 +80,14 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /projects/:projectId/tasks/:taskId - update a task
+// PUT /projects/:projectId/tasks/:taskId
 router.put("/:taskId", async (req, res) => {
   try {
     const { projectId, taskId } = req.params;
-    await ensureProjectOwnership(projectId, req.user.userId);
+    await ensureProjectExists(projectId);
 
     const { title, description, status, priority, dueDate, assigneeId } = req.body;
 
-    // Build only the fields that were explicitly sent
     const update = {};
 
     if (title !== undefined) {
@@ -139,14 +136,13 @@ router.put("/:taskId", async (req, res) => {
   }
 });
 
-// DELETE /projects/:projectId/tasks/:taskId - delete a task
+// DELETE /projects/:projectId/tasks/:taskId
 router.delete("/:taskId", async (req, res) => {
   try {
     const { projectId, taskId } = req.params;
-    await ensureProjectOwnership(projectId, req.user.userId);
+    await ensureProjectExists(projectId);
 
     const result = await Task.findOneAndDelete({ _id: taskId, projectId });
-
     if (!result) {
       return res.status(404).json({ error: "Task not found" });
     }

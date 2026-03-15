@@ -32,6 +32,13 @@ export function loginApi(email, password) {
   });
 }
 
+export function registerApi(name, email, password) {
+  return request("/auth/register", {
+    method: "POST",
+    body: { name, email, password },
+  });
+}
+
 // PROJECTS
 export function getProjectsApi(token) {
   return request("/projects", { method: "GET", token });
@@ -45,8 +52,20 @@ export function getProjectApi(token, projectId) {
   return request(`/projects/${projectId}`, { method: "GET", token });
 }
 
+export function updateProjectApi(token, projectId, updates) {
+  return request(`/projects/${projectId}`, { method: "PUT", token, body: updates });
+}
+
 export function deleteProjectApi(token, projectId) {
   return request(`/projects/${projectId}`, { method: "DELETE", token });
+}
+
+export function getUsersApi(token) {
+  return request("/users", { method: "GET", token });
+}
+
+export function getMyTasksApi(token) {
+  return request("/analytics/my-tasks", { method: "GET", token });
 }
 
 // TASKS

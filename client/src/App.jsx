@@ -2,7 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
-import LoginPage from "./pages/LoginPage";
+import HomePage from "./pages/HomePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 
@@ -14,7 +14,7 @@ function App() {
       <Route
         path="/"
         element={
-          isAuthenticated ? <Navigate to="/projects" replace /> : <LoginPage />
+          isAuthenticated ? <Navigate to="/projects" replace /> : <HomePage />
         }
       />
 

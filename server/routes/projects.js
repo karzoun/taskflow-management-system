@@ -7,13 +7,13 @@ const router = express.Router();
 
 const VALID_STATUSES = ["planned", "in-progress", "done"];
 
-// All routes below require a valid token
+// All routes require authentication
 router.use(auth);
 
-// GET /projects - list projects for current user
+// GET /projects - list ALL projects (shared workspace)
 router.get("/", async (req, res) => {
   try {
-    const projects = await Project.find({ ownerId: req.user.userId }).sort({ createdAt: -1 });
+    const projects = await Project.find({}).sort({ createdAt: -1 });
     res.json(projects);
   } catch (err) {
     console.error("GET /projects error:", err);
@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /projects - create new project
+// POST /projects - create new project (ownerId stored for audit)
 router.post("/", async (req, res) => {
   try {
     const { title, description, status, startDate, endDate } = req.body;
@@ -55,15 +55,13 @@ router.post("/", async (req, res) => {
   }
 });
 
-// GET /projects/:id - get single project (must belong to user)
+// GET /projects/:id - any authenticated user can access
 router.get("/:id", async (req, res) => {
   try {
-    const project = await Project.findOne({ _id: req.params.id, ownerId: req.user.userId });
-
+    const project = await Project.findById(req.params.id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
     }
-
     res.json(project);
   } catch (err) {
     console.error("GET /projects/:id error:", err);
@@ -71,12 +69,11 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// PUT /projects/:id - update project
+// PUT /projects/:id - any authenticated user can rename/update
 router.put("/:id", async (req, res) => {
   try {
     const { title, description, status, startDate, endDate } = req.body;
 
-    // Build only the fields that were actually sent
     const update = {};
 
     if (title !== undefined) {
@@ -100,8 +97,8 @@ router.put("/:id", async (req, res) => {
       update.status = status;
     }
 
-    const project = await Project.findOneAndUpdate(
-      { _id: req.params.id, ownerId: req.user.userId },
+    const project = await Project.findByIdAndUpdate(
+      req.params.id,
       { $set: update },
       { new: true }
     );
@@ -117,21 +114,14 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /projects/:id - delete project and all associated tasks
+// DELETE /projects/:id - delete project and all its tasks
 router.delete("/:id", async (req, res) => {
   try {
-    const project = await Project.findOneAndDelete({
-      _id: req.params.id,
-      ownerId: req.user.userId,
-    });
-
+    const project = await Project.findByIdAndDelete(req.params.id);
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
     }
-
-    // Cascade delete all tasks belonging to this project
     await Task.deleteMany({ projectId: req.params.id });
-
     res.json({ message: "Project deleted" });
   } catch (err) {
     console.error("DELETE /projects/:id error:", err);

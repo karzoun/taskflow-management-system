@@ -6,6 +6,7 @@ const authRoutes = require("./routes/auth");
 const projectRoutes = require("./routes/projects");
 const taskRoutes = require("./routes/tasks");
 const analyticsRoutes = require("./routes/analytics");
+const usersRoutes = require("./routes/users");
 
 
 const app = express();
@@ -18,6 +19,7 @@ app.use("/auth", authRoutes);
 app.use("/projects/:projectId/tasks", taskRoutes);
 app.use("/projects", projectRoutes);
 app.use("/analytics", analyticsRoutes);
+app.use("/users", usersRoutes);
 
 
 // Basic health check route

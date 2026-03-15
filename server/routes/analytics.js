@@ -5,59 +5,48 @@ const Task = require("../models/Task");
 
 const router = express.Router();
 
-// All analytics routes require auth
 router.use(auth);
 
-// GET /analytics/summary
-// Returns counts for projects and tasks by status for the current user
+// GET /analytics/summary — workspace-wide counts
 router.get("/summary", async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const totalProjects = await Project.countDocuments({});
 
-    // Get all projects for this user
-    const projects = await Project.find({ ownerId: userId }).select("_id");
-    const projectIds = projects.map((p) => p._id);
-
-    if (projectIds.length === 0) {
+    if (totalProjects === 0) {
       return res.json({
         totalProjects: 0,
         totalTasks: 0,
-        tasksByStatus: {
-          todo: 0,
-          inProgress: 0,
-          done: 0,
-        },
+        tasksByStatus: { todo: 0, inProgress: 0, done: 0 },
       });
     }
 
-    const [totalTasks, todoCount, inProgressCount, doneCount] =
-      await Promise.all([
-        Task.countDocuments({ projectId: { $in: projectIds } }),
-        Task.countDocuments({
-          projectId: { $in: projectIds },
-          status: "todo",
-        }),
-        Task.countDocuments({
-          projectId: { $in: projectIds },
-          status: "in-progress",
-        }),
-        Task.countDocuments({
-          projectId: { $in: projectIds },
-          status: "done",
-        }),
-      ]);
+    const [totalTasks, todoCount, inProgressCount, doneCount] = await Promise.all([
+      Task.countDocuments({}),
+      Task.countDocuments({ status: "todo" }),
+      Task.countDocuments({ status: "in-progress" }),
+      Task.countDocuments({ status: "done" }),
+    ]);
 
     res.json({
-      totalProjects: projects.length,
+      totalProjects,
       totalTasks,
-      tasksByStatus: {
-        todo: todoCount,
-        inProgress: inProgressCount,
-        done: doneCount,
-      },
+      tasksByStatus: { todo: todoCount, inProgress: inProgressCount, done: doneCount },
     });
   } catch (err) {
     console.error("GET /analytics/summary error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /analytics/my-tasks — tasks assigned to the current user across all projects
+router.get("/my-tasks", async (req, res) => {
+  try {
+    const tasks = await Task.find({ assigneeId: req.user.userId })
+      .sort({ createdAt: -1 })
+      .populate("projectId", "title");
+    res.json(tasks);
+  } catch (err) {
+    console.error("GET /analytics/my-tasks error:", err);
     res.status(500).json({ error: "Server error" });
   }
 });

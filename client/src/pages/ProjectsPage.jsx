@@ -4,11 +4,31 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   getProjectsApi,
   createProjectApi,
+  updateProjectApi,
   deleteProjectApi,
   getAnalyticsSummaryApi,
+  getMyTasksApi,
 } from "../api";
 
 const TITLE_MAX = 100;
+
+const STATUS_BADGE_CLASS = {
+  todo: "badge-todo",
+  "in-progress": "badge-inprogress",
+  done: "badge-done",
+};
+
+const STATUS_LABELS = {
+  todo: "To Do",
+  "in-progress": "In Progress",
+  done: "Done",
+};
+
+const PRIORITY_BADGE_CLASS = {
+  low: "badge-low",
+  medium: "badge-medium",
+  high: "badge-high",
+};
 
 function ProjectsPage() {
   const { token, user, logout, isAuthenticated } = useAuth();
@@ -16,9 +36,11 @@ function ProjectsPage() {
 
   const [projects, setProjects] = useState([]);
   const [analytics, setAnalytics] = useState(null);
+  const [myTasks, setMyTasks] = useState([]);
 
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+  const [loadingMyTasks, setLoadingMyTasks] = useState(true);
   const [pageError, setPageError] = useState("");
 
   // Create project form
@@ -27,6 +49,12 @@ function ProjectsPage() {
   const [titleError, setTitleError] = useState("");
   const [formError, setFormError] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Inline rename state
+  const [editingProjectId, setEditingProjectId] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [renameError, setRenameError] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const loadProjects = async () => {
     setPageError("");
@@ -53,6 +81,18 @@ function ProjectsPage() {
     }
   };
 
+  const loadMyTasks = async () => {
+    setLoadingMyTasks(true);
+    try {
+      const data = await getMyTasksApi(token);
+      setMyTasks(data);
+    } catch (err) {
+      console.error("My tasks error:", err);
+    } finally {
+      setLoadingMyTasks(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/");
@@ -60,26 +100,13 @@ function ProjectsPage() {
     }
     loadProjects();
     loadAnalytics();
+    loadMyTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, token]);
 
   const handleLogout = () => {
     logout();
     navigate("/");
-  };
-
-  const handleDeleteProject = async (projectId, projectTitle) => {
-    if (!window.confirm(`Delete "${projectTitle}"? This will also delete all its tasks and cannot be undone.`)) {
-      return;
-    }
-    setPageError("");
-    try {
-      await deleteProjectApi(token, projectId);
-      setProjects((prev) => prev.filter((p) => p._id !== projectId));
-      loadAnalytics();
-    } catch (err) {
-      setPageError(err.message || "Failed to delete project");
-    }
   };
 
   const handleCreateProject = async (e) => {
@@ -99,7 +126,6 @@ function ProjectsPage() {
         description: description.trim(),
         status: "planned",
       });
-
       setTitle("");
       setDescription("");
       await loadProjects();
@@ -108,6 +134,57 @@ function ProjectsPage() {
       setFormError(err.message || "Failed to create project");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId, projectTitle) => {
+    if (
+      !window.confirm(
+        `Delete "${projectTitle}"? This will also delete all its tasks and cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setPageError("");
+    try {
+      await deleteProjectApi(token, projectId);
+      setProjects((prev) => prev.filter((p) => p._id !== projectId));
+      setMyTasks((prev) =>
+        prev.filter((t) => t.projectId?._id !== projectId && t.projectId !== projectId)
+      );
+      loadAnalytics();
+    } catch (err) {
+      setPageError(err.message || "Failed to delete project");
+    }
+  };
+
+  const startRename = (project) => {
+    setEditingProjectId(project._id);
+    setEditTitle(project.title);
+    setRenameError("");
+  };
+
+  const cancelRename = () => {
+    setEditingProjectId(null);
+    setEditTitle("");
+    setRenameError("");
+  };
+
+  const handleRename = async (projectId) => {
+    if (!editTitle.trim()) {
+      setRenameError("Title cannot be empty");
+      return;
+    }
+    setRenaming(true);
+    setRenameError("");
+    try {
+      const updated = await updateProjectApi(token, projectId, { title: editTitle.trim() });
+      setProjects((prev) => prev.map((p) => (p._id === projectId ? updated : p)));
+      setEditingProjectId(null);
+    } catch (err) {
+      setRenameError(err.message || "Failed to rename project");
+    } finally {
+      setRenaming(false);
     }
   };
 
@@ -128,7 +205,7 @@ function ProjectsPage() {
           flexWrap: "wrap",
         }}
       >
-        <h1>My Projects</h1>
+        <h1>Projects</h1>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {user && (
             <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>
@@ -139,7 +216,7 @@ function ProjectsPage() {
         </div>
       </header>
 
-      {/* Analytics summary */}
+      {/* Workspace analytics */}
       <div className="card" style={{ marginBottom: "1.5rem" }}>
         {loadingAnalytics ? (
           <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
@@ -155,8 +232,114 @@ function ProjectsPage() {
           </div>
         ) : (
           <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
-            No analytics available yet.
+            No analytics available.
           </p>
+        )}
+      </div>
+
+      {/* My Assigned Tasks */}
+      <div className="card" style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ marginBottom: "0.875rem" }}>
+          My Tasks
+          {!loadingMyTasks && myTasks.length > 0 && (
+            <span
+              style={{ color: "var(--text-muted)", fontWeight: 400, fontSize: "0.875rem", marginLeft: "0.5rem" }}
+            >
+              ({myTasks.length})
+            </span>
+          )}
+        </h2>
+
+        {loadingMyTasks && (
+          <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            Loading…
+          </p>
+        )}
+
+        {!loadingMyTasks && myTasks.length === 0 && (
+          <p style={{ margin: 0, color: "var(--text-muted)", fontSize: "0.875rem" }}>
+            No tasks assigned to you yet.
+          </p>
+        )}
+
+        {!loadingMyTasks && myTasks.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            {myTasks.map((t) => {
+              const project = t.projectId;
+              const dueInfo = t.dueDate ? formatDueDate(t.dueDate) : null;
+              return (
+                <div
+                  key={t._id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    padding: "0.6rem 0.75rem",
+                    borderRadius: 8,
+                    background: "var(--surface-2)",
+                    borderLeft: "3px solid var(--accent)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontWeight: 500,
+                        fontSize: "0.9rem",
+                        marginBottom: "0.2rem",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {t.title}
+                    </div>
+                    {project && (
+                      <Link
+                        to={`/projects/${project._id}`}
+                        style={{
+                          fontSize: "0.775rem",
+                          color: "var(--accent)",
+                          textDecoration: "none",
+                        }}
+                      >
+                        {project.title}
+                      </Link>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "0.35rem",
+                      alignItems: "center",
+                      flexShrink: 0,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span className={`badge ${STATUS_BADGE_CLASS[t.status] || "badge-todo"}`}>
+                      {STATUS_LABELS[t.status] || t.status}
+                    </span>
+                    <span
+                      className={`badge ${PRIORITY_BADGE_CLASS[t.priority] || "badge-medium"}`}
+                    >
+                      {t.priority}
+                    </span>
+                    {dueInfo && (
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: dueInfo.overdue ? "var(--danger)" : "var(--text-muted)",
+                        }}
+                      >
+                        {dueInfo.overdue ? "Overdue · " : "Due · "}
+                        {dueInfo.label}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
@@ -208,12 +391,11 @@ function ProjectsPage() {
         </form>
       </div>
 
-      {/* Page-level errors (load / delete) */}
       {pageError && <AlertError style={{ marginBottom: "1rem" }}>{pageError}</AlertError>}
 
       {/* Projects list */}
       <section>
-        <h2 style={{ marginBottom: "0.875rem" }}>Projects</h2>
+        <h2 style={{ marginBottom: "0.875rem" }}>All Projects</h2>
 
         {loadingProjects && (
           <p style={{ color: "var(--text-muted)", fontSize: "0.875rem" }}>Loading projects…</p>
@@ -237,36 +419,105 @@ function ProjectsPage() {
                 gap: "1rem",
                 transition: "border-color 0.15s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              onMouseEnter={(e) =>
+                editingProjectId !== p._id &&
+                (e.currentTarget.style.borderColor = "var(--accent)")
+              }
+              onMouseLeave={(e) =>
+                editingProjectId !== p._id &&
+                (e.currentTarget.style.borderColor = "var(--border)")
+              }
             >
-              <Link
-                to={`/projects/${p._id}`}
-                style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: p.description ? "0.2rem" : 0 }}>
-                  {p.title}
-                </div>
-                {p.description && (
-                  <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
-                    {p.description}
+              {editingProjectId === p._id ? (
+                /* Inline rename form */
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <input
+                    value={editTitle}
+                    onChange={(e) => {
+                      if (e.target.value.length <= TITLE_MAX) setEditTitle(e.target.value);
+                      if (renameError) setRenameError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleRename(p._id);
+                      if (e.key === "Escape") cancelRename();
+                    }}
+                    autoFocus
+                    maxLength={TITLE_MAX}
+                    style={renameError ? { borderColor: "var(--danger)" } : undefined}
+                  />
+                  {renameError && (
+                    <span style={{ color: "var(--danger)", fontSize: "0.775rem" }}>
+                      {renameError}
+                    </span>
+                  )}
+                  <div style={{ display: "flex", gap: "0.4rem", marginTop: "0.5rem" }}>
+                    <button
+                      className="btn-primary"
+                      onClick={() => handleRename(p._id)}
+                      disabled={renaming}
+                      style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
+                    >
+                      {renaming ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      onClick={cancelRename}
+                      style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
+                    >
+                      Cancel
+                    </button>
                   </div>
-                )}
-              </Link>
-              <button
-                className="btn-danger"
-                onClick={() => handleDeleteProject(p._id, p.title)}
-                title="Delete project"
-                style={{ flexShrink: 0 }}
-              >
-                Delete
-              </button>
+                </div>
+              ) : (
+                /* Normal project row */
+                <Link
+                  to={`/projects/${p._id}`}
+                  style={{ flex: 1, textDecoration: "none", color: "inherit", minWidth: 0 }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: p.description ? "0.2rem" : 0 }}>
+                    {p.title}
+                  </div>
+                  {p.description && (
+                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                      {p.description}
+                    </div>
+                  )}
+                </Link>
+              )}
+
+              {editingProjectId !== p._id && (
+                <div style={{ display: "flex", gap: "0.4rem", flexShrink: 0 }}>
+                  <button
+                    onClick={() => startRename(p)}
+                    title="Rename project"
+                    style={{ fontSize: "0.8rem", padding: "0.35rem 0.65rem" }}
+                  >
+                    Rename
+                  </button>
+                  <button
+                    className="btn-danger"
+                    onClick={() => handleDeleteProject(p._id, p.title)}
+                    title="Delete project"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </section>
     </div>
   );
+}
+
+function formatDueDate(dateStr) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return {
+    label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    overdue: d < now,
+  };
 }
 
 function StatItem({ label, value, color }) {
